@@ -11,7 +11,7 @@ Directly go into vtysh mode :
 
 then paste the following :
 ```sh
-hostname routeur_acloos-1
+hostname _acloos-1
 no ipv6 forwarding
 !
 interface eth0
@@ -34,7 +34,7 @@ router bgp 1
  !
  address-family l2vpn evpn
   neighbor ibgp activate
-  neighbor ibgp reoute-reflector-client
+  neighbor ibgp route-reflector-client
  exit-address-family
 !
 router ospf
@@ -64,7 +64,7 @@ then go into vtysh mode :
 
 then paste the following :
 ```sh
-hostname routeur_acloos-2
+hostname _acloos-2
 no ipv6 forwarding
 !
 interface eth0
@@ -96,7 +96,7 @@ Directly go into vtysh mode :
 
 then paste the following :
 ```sh
-hostname routeur_acloos-3
+hostname _acloos-3
 no ipv6 forwarding
 !
 interface eth1
@@ -128,7 +128,7 @@ ip link set dev br0 up
 ip link add vxlan10 type vxlan id 10 dstport 4789
 ip link set dev vxlan10 up
 brctl addif br0 vxlan10
-brctl addif br0 eth1
+brctl addif br0 eth0
 ```
 
 then go into vtysh mode :
@@ -138,7 +138,7 @@ then go into vtysh mode :
 
 then paste the following :
 ```sh
-hostname routeur_acloos-4
+hostname _acloos-4
 no ipv6 forwarding
 !
 interface eth2
@@ -169,3 +169,12 @@ Then, still in vtysh, check devices can communicate :
 
 
 ## boot host machine1, then machine3, then machine2 (13:03)
+
+host machine 1
+ip addr add 20.1.1.1/24 dev eth1
+
+host machine 2
+ip addr add 20.1.1.2/24 dev eth0
+
+host machine 3
+ip addr add 20.1.1.3/24 dev eth0

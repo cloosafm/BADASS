@@ -16,9 +16,9 @@ ip link add name br0 type bridge
 ip link set dev br0 up
 
 brctl addif br0 vxlan10
-# brctl addif br0 eth0  ## when using it, not ok
-# brctl addif br0 eth1  ## when using it, not ok
-# brctl addif br0 eth2  ## when using it, not ok
+# brctl addif br0 eth0
+# brctl addif br0 eth1
+# brctl addif br0 eth2
 
 ```
 
@@ -122,7 +122,9 @@ EOF
 ## router 3
 
 ```
-?? brctl addif br0 eth1
+?? 
+brctl addif br0 eth0
+
 
 # Create VXLAN interface for VNI 10
 ip link add name vxlan10 type vxlan id 10 dev eth1 dstport 4789
@@ -132,7 +134,7 @@ ip link set dev vxlan10 up
 ip link add name br0 type bridge
 ip link set dev br0 up
 
-brctl addif br0 eth0
+brctl addif br0 eth1
 brctl addif br0 vxlan10
 
 
@@ -147,7 +149,7 @@ interface eth1
  ip address 10.1.1.6/30
  ip ospf area 0
 exit
-! Set the IP address and enable OSPF on lo interface
+! Set the IP addres and enable OSPF on lo interface
 interface lo
  ip address 1.1.1.3/32
  ip ospf area 0
@@ -174,7 +176,9 @@ EOF
 ## router 4
 
 ```
-?? brctl addif br0 eth2
+?? 
+brctl addif br0 eth0
+
 
 # Create VXLAN interface for VNI 10
 ip link add name vxlan10 type vxlan id 10 dev eth2 dstport 4789
@@ -184,7 +188,7 @@ ip link set dev vxlan10 up
 ip link add name br0 type bridge
 ip link set dev br0 up
 
-brctl addif br0 eth0
+brctl addif br0 eth2
 brctl addif br0 vxlan10
 
 
