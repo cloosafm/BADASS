@@ -5,11 +5,12 @@
 
 In bash :
 ```sh
-ip address flush dev eth0;
-ip address flush dev eth1 2>/dev/null;
-ip address flush dev eth2 2>/dev/null;
-ip link del br0 2>/dev/null;
-ip link del vxlan10 2>/dev/null;
+bash
+ip address flush dev eth0
+ip address flush dev eth1 2>/dev/null
+ip address flush dev eth2 2>/dev/null
+ip link del br0 2>/dev/null
+ip link del vxlan10 2>/dev/null
 ```
 
 

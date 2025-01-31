@@ -1,8 +1,8 @@
 # P3 - BGP-EVPN
 
 ## EVPN
-RFC 7432
 EVPN (Ethernet Virtual Private Network) is a technology that enables the extension of Layer 2 Ethernet networks over a Layer 3 IP-based infrastructure. It uses BGP (Border Gateway Protocol) to advertise MAC addresses and manage the forwarding of Ethernet frames across different physical locations.  It encapsulates Ethernet frames into VXLAN or MPLS packets to transport them over a Layer 3 network, allowing for seamless communication between devices across different sites. By combining Layer 2 connectivity features like virtual machine mobility with the scalability and routing capabilities of Layer 3, EVPN enables efficient traffic management, load balancing, and high availability in large-scale, multi-tenant environments.
+EVPN is described in RFC 7432.
 
 
 ## Spine-leaf architecture
@@ -13,6 +13,13 @@ Spine-leaf architecture is a network topology commonly used in data centers to p
 
 This design minimizes bottlenecks and ensures that traffic can take multiple paths across the network, providing both high bandwidth and redundancy. It's particularly effective in large-scale environments like cloud data centers.
 
+
+## OSPF
+OSPF is a dynamic routing protocol that automatically discovers and maintains routes within an OSPF area - for instance, it automatically updates touring tables whenever there is a change in the network topology. Here are some key points about dynamic relationships:
+- Automatic Route Discovery: OSPF routers automatically discover other OSPF routers in the same area and exchange routing information. This means that routes are dynamically learned and updated without manual intervention.
+- Link-State Advertisements (LSAs): OSPF routers send LSAs to share information about their local routing topology. This allows all routers in the OSPF area to have a consistent view of the network.
+- Dynamic Updates: When there are changes in the network topology (e.g., a link goes down or a new router is added), OSPF dynamically updates the routing tables of all routers in the area to reflect the changes.
+- Convergence: OSPF quickly converges to a new routing topology when changes occur, ensuring that the network remains stable and efficient.
 
 ## Route types
 In OSPF, there are several route types that categorize how routes are learned and propagated. 
@@ -200,18 +207,195 @@ ET = Ethernet Tag
 used in EVPN (Ethernet VPN) to identify a specific Ethernet segment. It helps in distinguishing between different broadcast domains or VLANs within the EVPN.
 
 
+## Configuration and setup of the project
+### How to use this project
 
-
-## How to set up and configure the project
-
-
-
-## setup
-Start by building the images in P1 with the script
+![NETWORK](../screenshots/p3_evpn_topology.png)
 
 In GNS3 :
 - Import portable project P3
 - Start all machines
-- Use bgp_evpn.sh script to configure machines / or copy/paste the commands directly in auxiliary console
-        MUST USE BASH and vtysh
-- use the auxiliary console to get into any machine
+- Copy/paste the commands for each type of config, in auxiliary console.
+
+### Configuration details
+#### Routers
+1. Remove all IP configuration on all 4 routers, to make sure there are no conflicts, and have a clean configuration
+```bash
+# Flush IP addresses on all 3 used ethernet ports
+ip address flush dev eth0
+ip address flush dev eth1 2>/dev/null
+ip address flush dev eth2 2>/dev/null
+# Delete any network bridge interface that would be named br0
+ip link del br0 2>/dev/null
+# Delete any vxlan interface that would be named vxlan10
+ip link del vxlan10 2>/dev/null
+```
+2. Configure spine router in vtysh, in order to set up BGP and OSPF routing protocols
+``` sh
+conf t
+! Set the hostname of the router
+hostname <spine_router>
+! Disable IPv6 forwarding
+no ipv6 forwarding
+! Select the interface connected to leaf router 2
+interface <eth_port_to_r2>
+! Assign IP address to the interface connected to leaf router 2
+ip address <leaf_router_2>
+! Select the interface connected to leaf router 3
+interface <eth_port_to_r3>
+! Assign IP address to the interface connected to leaf router 3
+ip address <leaf_router_3>
+! Select the interface connected to leaf router 4
+interface <eth_port_to_r4>
+! Assign IP address to the interface connected to leaf router 4
+ip address <leaf_router_4>
+! Select the loopback interface
+interface lo
+! Assign IP address to the loopback interface
+ip address <loopback_address>
+! Enter BGP configuration mode for AS 1
+router bgp 1
+! Define a peer group named 'ibgp'
+neighbor ibgp peer-group
+! Set the remote AS for the peer group to 1
+neighbor ibgp remote-as 1
+! Use the loopback interface as the update source for the peer group
+neighbor ibgp update-source lo
+! Define the IP range to automatically/dynamically create BGP neighbor relationships
+bgp listen range <IP_range> peer-group ibgp
+! Enter the address-family configuration mode for L2VPN EVPN
+address-family l2vpn evpn
+! Activate the 'ibgp' peer group for L2VPN EVPN
+neighbor ibgp activate
+! Configure the 'ibgp' peer group as route-reflector clients
+neighbor ibgp route-reflector-client
+! Exit the address-family configuration mode
+exit-address-family
+! Enter OSPF configuration mode
+router ospf
+! Advertise all networks in OSPF area 0
+network 0.0.0.0/0 area 0
+! Enter line configuration mode for virtual terminal lines
+line vty
+```
+3. Configure VXLAN on leaf routers 2 and 4, in order to create tunneling between these two routers.
+```bash
+# Create a new network bridge interface named br0
+ip link add br0 type bridge
+# Bring up the bridge interface br0
+ip link set dev br0 up
+# Create a VXLAN interface named vxlan10 with VXLAN ID 10 and destination port 4789 (standard RFC port)
+ip link add vxlan10 type vxlan id 10 dstport 4789
+# Bring up the VXLAN interface vxlan10
+ip link set dev vxlan10 up
+# Add the VXLAN interface vxlan10 to the bridge br0
+brctl addif br0 vxlan10
+# Add the Ethernet interface connected to the host to the bridge br0
+brctl addif br0 <eth_port_to_host>
+```
+4. Configure all leaf routers in vtysh, to set up BGP and OSPF routing protocols.
+```sh
+conf t
+! Set the hostname of the leaf router
+hostname <leaf_router_X>
+! Disable IPv6 forwarding
+no ipv6 forwarding
+! Select the interface connected to the spine router
+interface <eth_port_to_spine>
+! Assign IP address to the interface connected to the spine router
+ip address <leaf_ip>
+! Enable OSPF on the interface and assign it to area 0
+ip ospf area 0
+! Select the loopback interface
+interface lo
+! Assign IP address to the loopback interface
+ip address <Leaf_loopback>
+! Enable OSPF on the loopback interface and assign it to area 0
+ip ospf area 0
+! Enter BGP configuration mode for AS 1
+router bgp 1
+! Define a BGP neighbor with IP 1.1.1.1 in remote AS 1
+neighbor 1.1.1.1 remote-as 1
+! Use the loopback interface as the update source for the BGP neighbor
+neighbor 1.1.1.1 update-source lo
+! Enter the address-family configuration mode for L2VPN EVPN
+address-family l2vpn evpn
+! Activate the BGP neighbor for L2VPN EVPN
+neighbor 1.1.1.1 activate
+! Advertise all VNI (Virtual Network Identifier)
+advertise-all-vni
+! Exit the address-family configuration mode
+exit-address-family
+! Enter OSPF configuration mode
+router ospf
+```
+
+#### Hosts
+1. Reset IP configuration on all 3 hosts on eth0 and eth1, to make sure there are no conflicts.
+```bash
+# Flush IP addresses on our used port
+ip address flush dev <eth_port_to_router>
+```
+2. Configure IP address on each host
+```sh
+# Assign the specified IP address to the specified Ethernet interface
+ip addr add <host_ip_address> dev <eth_port_to_router>
+```
+
+
+
+
+
+### Commands
+#### ```do sh ip route```
+This command displays the current IP routing table of the router. This table includes information about the network destinations, the associated next-hop IP addresses, the interfaces through which the routes are reachable, and the routing protocols that provided the routes. It is used to understand how the router forwards packets to different network destinations. In our project, the output includes the routes learned via OSPF, the directly connected routes, and the local routes.
+
+![CMD_IP_ROUTE](../screenshots/p3_do_sh_ip_route.png)
+
+
+The output of the `do sh ip route` command shows the current IP routing table, including routes learned via OSPF, directly connected routes, and local routes. Here's a summary:
+
+- **OSPF Routes (`O>`)**:
+  - `1.1.1.1/32`, `1.1.1.2/32`, `1.1.1.3/32`, `10.1.1.0/30`, and `10.1.1.4/30` are learned via OSPF with next-hop `10.1.1.9` on interface `eth2`.
+  - `1.1.1.4/32` and `10.1.1.8/30` are directly connected via `lo` and `eth2` respectively.
+
+- **Directly Connected Routes (`C>`)**:
+  - `1.1.1.4/32` and `10.1.1.8/30` are directly connected on interfaces `lo` and `eth2`.
+
+- **Local Routes (`L>`)**:
+  - `1.1.1.4/32` and `10.1.1.10/32` are local routes on interfaces `lo` and `eth2`.
+
+Each route entry includes the destination network, administrative distance/metric, next-hop IP address, outgoing interface, route weight, and route age.
+
+
+
+#### ```do sh bgp summary```
+This command displays a summary of the BGP (Border Gateway Protocol) status, including information about BGP neighbors, their states, the number of prefixes received/sent (prefixes being the IP address ranges advertised and learned between BGP neighbors), and other relevant statistics. This command is typically used in the context of a router's configuration mode to quickly check the status of BGP sessions. In our project, it shows the status of BGP neighbors (routers that have established a BGP session together), the number of prefixes received and sent, and memory usage for both IPv4 Unicast and L2VPN EVPN address families.
+
+
+![BGP_SUMMARY](../screenshots/p3_do_sh_bgp_summary.png)
+
+Here, we see that there is no prefix exchanged in IPv4 unicast, as we have not configured anything for IPv4 unicast. However, the leaf router is exchanging prefixes with the spine router, as it is acting as route reflector.
+To add, the sent and received prefixes in BGP are used to share and learn network routes between BGP neighbors, and the routers need them to make efficient and accurate routing decisions.
+
+
+#### ```do sh bgp l2vpn evpn```
+This command displays information about the BGP EVPN (Ethernet VPN) routes and their status. This includes details about the EVPN routes learned via BGP, their attributes, route distinguishers, Ethernet tags, and the status of the EVPN sessions. This command is useful for monitoring and troubleshooting BGP EVPN configurations.
+
+If we use it with only the routers started and configured, we get the following:
+
+![BGP_SUMMARY](../screenshots/p3_do_sh_bgp_l2vpn_evpn_v1.png)
+
+
+It shows that Router 4 has learned two EVPN type-3 prefixes : one from itself and one from Router 2.
+As no host machine is up at the moment, we have only type-3 routes. Once a host is up, its MAC address can be learned by the router, showing as a type-2 route.
+
+
+![BGP_SUMMARY](../screenshots/p3_do_sh_bgp_l2vpn_evpn_v2.png)
+With one host up but NOT CONFIGURED (specifically : no IP address configured), we can see that the router still is able to learn the host's MAC address. It shows as the type-2 route here.
+
+
+
+![BGP_SUMMARY](../screenshots/p3_do_sh_bgp_l2vpn_evpn_v3.png)
+
+As we have not configured vxlan on router 3, its attached host is not recognized. We only have typer-2 routes for hosts 1 and 3.

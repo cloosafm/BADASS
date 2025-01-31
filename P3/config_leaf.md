@@ -3,6 +3,7 @@
 ## reset network conf
 For each leaf router, reset network conf in bash:
 ``` sh
+bash
 ip address flush dev eth0
 ip address flush dev eth1 2>/dev/null
 ip address flush dev eth2 2>/dev/null
@@ -74,6 +75,7 @@ neighbor 1.1.1.1 remote-as 1
 neighbor 1.1.1.1 update-source lo
 address-family l2vpn evpn
 neighbor 1.1.1.1 activate
+advertise-all-vni
 exit-address-family
 router ospf
 ```

@@ -23,9 +23,10 @@ En gros, Un type d'adresse BGP qui permet de créer des VPN au niveau 2 (Etherne
 En gros, un protocole de tunneling qui transporte des segments de réseau de niveau 2 via des réseaux de niveau 3 grâce à l'encapsulation dans des paquets UDP.
 
 - `OSPF (Open Shortest Path First)`: A routing protocol used within an autonomous system. 
-En gros, un protocole de routage interne conçu pour trouver le chemin le plus court dans un réseau autonome.
+En gros, un protocole de routage interne conçu pour trouver le chemin le plus court dans un réseau autonome, couche 2
 
-- `IS-IS (Intermediate System to Intermediate System)`: Another interior gateway protocol for routing within an autonomous system. En gros, un protocole de routage interne, souvent utilisé dans les grands réseaux comme ceux des opérateurs télécoms.
+- `IS-IS (Intermediate System to Intermediate System)`: Another interior gateway protocol for routing within an autonomous system. En gros, un protocole de routage interne, souvent utilisé dans les grands réseaux comme ceux des opérateurs télécoms, couche 2.
+
 ## Tools
 
 - `Wireshark` : Open-Source Analysor of network packets. We can capture and inspect data on a network in real time. it use for: 
